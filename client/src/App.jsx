@@ -23,16 +23,12 @@ function App() {
     setPendingQuestion(question);
 
     try {
-      const formData = new FormData();
-      formData.append("question", question);
-
-      if (selectedFile) {
-        formData.append("pdf", selectedFile);
-      }
-
       const response = await fetch("/api/chat", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ question }),
       });
 
       if (!response.ok) {
@@ -41,7 +37,7 @@ function App() {
 
       const data = await response.json();
       setMessages((prev) => [...prev, data]);
-      setSelectedFile(null); // Clear file after successful submission
+      setSelectedFile(null);
     } catch (err) {
       setError("Failed to get AI response. Please try again.");
       console.error("Chat error:", err);

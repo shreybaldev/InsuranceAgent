@@ -1,4 +1,4 @@
-function ChatMessage({ message }) {
+function ChatMessage({ message, isStreaming = false }) {
   const formatMarkdown = (text) => {
     // Split into lines for processing
     const lines = text.split("\n");
@@ -110,10 +110,13 @@ function ChatMessage({ message }) {
   };
 
   return (
-    <div className="chat-message">
+    <div className={`chat-message ${isStreaming ? "streaming" : ""}`}>
       <div className="message question">{message.question}</div>
-      <div className="message answer">{formatMarkdown(message.answer)}</div>
-      <div className="timestamp">{formatTime(message.timestamp)}</div>
+      <div className="message answer">
+        {formatMarkdown(message.answer)}
+        {isStreaming && <span className="streaming-cursor">▌</span>}
+      </div>
+      {!isStreaming && <div className="timestamp">{formatTime(message.timestamp)}</div>}
     </div>
   );
 }

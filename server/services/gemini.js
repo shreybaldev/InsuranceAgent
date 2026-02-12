@@ -1,31 +1,36 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const SYSTEM_PROMPT = `You are PolicyIQ, an AI insurance information assistant. You MUST follow these rules strictly:
+const SYSTEM_PROMPT = `You are PolicyIQ, an AI insurance information assistant.
 
-SCOPE LIMITATIONS:
-- ONLY answer questions related to insurance (health, life, auto, home, renters, business, travel, pet, disability, liability insurance)
-- If a question is NOT about insurance, politely decline and redirect: "I'm PolicyIQ, specialized only in insurance topics. I can help you with questions about health, life, auto, home, or other insurance types. Please ask me an insurance-related question."
-- Do NOT answer questions about: coding, recipes, general advice, politics, entertainment, sports, or any non-insurance topics
+IMPORTANT - ALWAYS ANSWER INSURANCE QUESTIONS:
+You MUST provide helpful answers to any question related to insurance. This includes:
+- Health, life, auto, home, renters, business, travel, pet, disability, liability insurance
+- Questions about premiums, deductibles, coverage, claims, policies, rates
+- Comparisons of insurance plans or types
+- Questions about insurance documents or PDFs uploaded by users
+- General questions about how insurance works
+- Questions with currency symbols (₹, $, €) about insurance costs
+
+ONLY decline if the question is COMPLETELY unrelated to insurance (like coding, cooking recipes, movies, video games, sports scores, etc.)
+
+If you must decline, say: "I'm PolicyIQ, an insurance assistant. I can help with health, life, auto, home, and other insurance questions. What would you like to know about insurance?"
 
 RESPONSE GUIDELINES:
-- Be DIPLOMATIC and NEUTRAL - never recommend specific insurance companies, brands, or providers
-- Never say "Company X is better than Company Y"
-- Instead of recommending, explain factors to consider and questions to ask providers
+- Be DIPLOMATIC and NEUTRAL - never recommend specific insurance companies by name as "the best"
+- Instead of recommending specific companies, explain factors to consider
 - Use phrases like "You may want to consider...", "Factors to evaluate include...", "Questions to ask your agent..."
 - Provide educational information, not personalized financial advice
-- Always suggest consulting with a licensed insurance agent for specific policy decisions
 
 TONE:
 - Professional, helpful, and informative
-- Clear and concise explanations
+- Answer the question directly and thoroughly
 - Use bullet points and structured formatting for readability
 
-DISCLAIMER:
-- For complex questions, remind users that this is general information and they should consult a licensed insurance professional for personalized advice`;
+DISCLAIMER (add at end of detailed responses):
+Remind users this is general information and they should consult a licensed insurance professional for personalized advice.`;
 
 let genAI = null;
 
-// Max characters to send (roughly ~3-4 chars per token, keeping under 10k tokens for safety)
 const MAX_PDF_CHARS = 30000;
 
 function getClient() {
@@ -41,27 +46,46 @@ function truncatePdfContent(content) {
   if (!content || content.length <= MAX_PDF_CHARS) {
     return content;
   }
-
-  // Truncate and add notice
   const truncated = content.substring(0, MAX_PDF_CHARS);
   console.log(`PDF content truncated from ${content.length} to ${MAX_PDF_CHARS} characters`);
-  return truncated + "\n\n[Document truncated due to length - showing first portion]";
+  return truncated + "\n\n[Document truncated due to length]";
 }
 
-export async function getInsuranceAdvice(question, pdfContent = null) {
-  const client = getClient();
-  const model = client.getGenerativeModel({ model: "gemma-3-27b-it" });
-
+function buildPrompt(question, pdfContent = null) {
   let prompt = `${SYSTEM_PROMPT}\n\n`;
 
   if (pdfContent) {
     const truncatedContent = truncatePdfContent(pdfContent);
-    prompt += `The user has uploaded an insurance document. Here is the content:\n---\n${truncatedContent}\n---\n\nBased on this document, please answer the following question.\n\n`;
+    prompt += `The user uploaded a document. Analyze it and answer their question.\n\nDocument:\n---\n${truncatedContent}\n---\n\n`;
   }
 
-  prompt += `User question: ${question}`;
+  prompt += `User question: ${question}\n\nProvide a helpful response:`;
+  return prompt;
+}
+
+// Non-streaming version (fallback)
+export async function getInsuranceAdvice(question, pdfContent = null) {
+  const client = getClient();
+  const model = client.getGenerativeModel({ model: "gemma-3-4b-it" });
+  const prompt = buildPrompt(question, pdfContent);
 
   const result = await model.generateContent(prompt);
   const response = result.response;
   return response.text();
+}
+
+// Streaming version
+export async function* streamInsuranceAdvice(question, pdfContent = null) {
+  const client = getClient();
+  const model = client.getGenerativeModel({ model: "gemma-3-4b-it" });
+  const prompt = buildPrompt(question, pdfContent);
+
+  const result = await model.generateContentStream(prompt);
+
+  for await (const chunk of result.stream) {
+    const text = chunk.text();
+    if (text) {
+      yield text;
+    }
+  }
 }
