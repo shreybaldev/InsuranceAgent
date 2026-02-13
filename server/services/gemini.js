@@ -66,7 +66,7 @@ function buildPrompt(question, pdfContent = null) {
 // Non-streaming version (fallback)
 export async function getInsuranceAdvice(question, pdfContent = null) {
   const client = getClient();
-  const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = client.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
   const prompt = buildPrompt(question, pdfContent);
 
   const result = await model.generateContent(prompt);
@@ -77,7 +77,7 @@ export async function getInsuranceAdvice(question, pdfContent = null) {
 // Streaming version
 export async function* streamInsuranceAdvice(question, pdfContent = null) {
   const client = getClient();
-  const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = client.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
   const prompt = buildPrompt(question, pdfContent);
 
   const result = await model.generateContentStream(prompt);
