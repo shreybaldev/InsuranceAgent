@@ -36,7 +36,10 @@ const MAX_PDF_CHARS = 30000;
 function getClient() {
   if (!genAI) {
     const apiKey = process.env.GEMINI_API_KEY;
-    console.log("Initializing Gemini with API key:", apiKey ? `${apiKey.substring(0, 10)}...` : "MISSING");
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY environment variable is not set. Add it to Railway variables or a local .env file.");
+    }
+    console.log("Gemini API key loaded successfully");
     genAI = new GoogleGenerativeAI(apiKey);
   }
   return genAI;

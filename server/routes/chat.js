@@ -79,7 +79,10 @@ router.post("/chat", upload.single("pdf"), async (req, res) => {
     res.json(entry);
   } catch (error) {
     console.error("Chat error:", error);
-    res.status(500).json({ error: "Failed to get AI response" });
+    const message = error.message?.includes("GEMINI_API_KEY")
+      ? "Gemini API key is not configured"
+      : "Failed to get AI response";
+    res.status(500).json({ error: message });
   }
 });
 
@@ -142,7 +145,10 @@ router.post("/chat/stream", upload.single("pdf"), async (req, res) => {
     await saveHistory(history);
   } catch (error) {
     console.error("Stream chat error:", error);
-    res.write(`data: ${JSON.stringify({ error: "Failed to get AI response" })}\n\n`);
+    const message = error.message?.includes("GEMINI_API_KEY")
+      ? "Gemini API key is not configured"
+      : "Failed to get AI response";
+    res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
     res.end();
   }
 });
